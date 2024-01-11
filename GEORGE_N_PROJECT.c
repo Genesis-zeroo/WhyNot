@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
-#include <string.h>
-
 
 typedef struct {
     int burstTime;
@@ -10,7 +8,6 @@ typedef struct {
     int priority;
     int waitingTime;
 } Job;
-
 
 int readJobsFromFile(char *filename, Job **jobs) {
     FILE *inputFile = fopen(filename, "r");
@@ -23,7 +20,7 @@ int readJobsFromFile(char *filename, Job **jobs) {
     fscanf(inputFile, "%d", &numJobs);
 
     *jobs = (Job *)malloc(numJobs * sizeof(Job));
-	int i;
+    int i;
     for ( i = 0; i < numJobs; i++) {
         fscanf(inputFile, "%d:%d:%d", &((*jobs)[i].burstTime), &((*jobs)[i].arrivalTime), &((*jobs)[i].priority));
     }
@@ -32,28 +29,23 @@ int readJobsFromFile(char *filename, Job **jobs) {
     return numJobs;
 }
 
-// Function to simulate CPU scheduling using FCFS algorithm
 void simulateCPU_FCFS(Job *jobs, int numJobs, FILE *outputFile) {
     int currentTime = 0;
-	int i;
+    int i;
     for ( i = 0; i < numJobs; i++) {
-        fprintf(outputFile, "Job %d starts at time %d\n", i + 1, currentTime);
+        fprintf(outputFile, "P%d: %d ms\n", i + 1, currentTime);
         jobs[i].waitingTime = currentTime - jobs[i].arrivalTime;
         currentTime += jobs[i].burstTime;
-        fprintf(outputFile, "Job %d finishes at time %d\n", i + 1, currentTime);
     }
 }
 
-
-// Function to simulate CPU scheduling using SJF algorithm (Non-Preemptive)
 void simulateCPU_SJF(Job *jobs, int numJobs, FILE *outputFile) {
-
-    int i;
-    for ( i = 0; i < numJobs - 1; i++) {
-    	int j;
+    
+    int i,j;
+    for (i = 0; i < numJobs - 1; i++) {
         for ( j = 0; j < numJobs - i - 1; j++) {
             if (jobs[j].burstTime > jobs[j + 1].burstTime) {
-               
+                
                 Job temp = jobs[j];
                 jobs[j] = jobs[j + 1];
                 jobs[j + 1] = temp;
@@ -66,46 +58,50 @@ void simulateCPU_SJF(Job *jobs, int numJobs, FILE *outputFile) {
 
     fprintf(outputFile, "Scheduling Method: Shortest Job First – Non-Preemptive\n");
     fprintf(outputFile, "Process Waiting Times:\n");
-	
+
     for ( i = 0; i < numJobs; i++) {
         fprintf(outputFile, "P%d: %d ms\n", i + 1, currentTime - jobs[i].arrivalTime);
         totalWaitingTime += currentTime - jobs[i].arrivalTime;
-
         currentTime += jobs[i].burstTime;
     }
 
     fprintf(outputFile, "Average Waiting Time: %.2f ms\n", (float)totalWaitingTime / numJobs);
 }
+ // Function to simulate CPU scheduling using Priority algorithm (Preemptive and Non-Preemptive)
+void simulateCPU_Priority(Job *jobs, int numJobs, int preemptive, FILE *outputFile) {
+    
+    if (!preemptive) {
+    	int i,j;
+        for ( i = 0; i < numJobs - 1; i++) {
+            for ( j = 0; j < numJobs - i - 1; j++) {
+                if (jobs[j].priority > jobs[j + 1].priority) {
+                    
+                    Job temp = jobs[j];
+                    jobs[j] = jobs[j + 1];
+                    jobs[j + 1] = temp;
+                }
+            }
+        }
+    }
 
-
-
-
-
-
-
-
-
-// Function to simulate CPU scheduling using SJF algorithm (Preemptive)
-void simulateCPU_Priority(Job *jobs, int numJobs, int preemptive, FILE *outputFile)
-/*void simulateCPU_SJF(Job *jobs, int numJobs, FILE *outputFile)*/ {
     int *remainingTime = (int *)malloc(numJobs * sizeof(int));
     int currentTime = 0;
     int totalWaitingTime = 0;
 
-   
+    
     int i;
     for ( i = 0; i < numJobs; i++) {
         remainingTime[i] = jobs[i].burstTime;
     }
 
-    fprintf(outputFile, "Scheduling Method: Shortest Job First –Preemptive\n");
+    fprintf(outputFile, "Scheduling Method: Priority Scheduling – %s\n", preemptive ? "Preemptive" : "Non-Preemptive");
     fprintf(outputFile, "Process Waiting Times:\n");
 
     int done = 0;
 
     while (!done) {
         done = 1;
-		int i;
+        int i;
         for ( i = 0; i < numJobs; i++) {
             if (remainingTime[i] > 0) {
                 done = 0;
@@ -113,7 +109,7 @@ void simulateCPU_Priority(Job *jobs, int numJobs, int preemptive, FILE *outputFi
                 fprintf(outputFile, "P%d: %d ms\n", i + 1, currentTime - jobs[i].arrivalTime);
                 totalWaitingTime += currentTime - jobs[i].arrivalTime;
 
-                if (remainingTime[i] > 1) {
+                if (preemptive) {
                     currentTime++;
                     remainingTime[i]--;
                 } else {
@@ -128,12 +124,8 @@ void simulateCPU_Priority(Job *jobs, int numJobs, int preemptive, FILE *outputFi
 
     free(remainingTime);
 }
+    
 
-
-
-
-
-// Function to simulate CPU scheduling using Round Robin scheduling
 void simulateCPU_RoundRobin(Job *jobs, int numJobs, int timeQuantum, FILE *outputFile) {
     int *remainingTime = (int *)malloc(numJobs * sizeof(int));
     int *arrivalOrder = (int *)malloc(numJobs * sizeof(int));
@@ -152,10 +144,11 @@ void simulateCPU_RoundRobin(Job *jobs, int numJobs, int timeQuantum, FILE *outpu
 
     while (1) {
         int done = 1;  
-
+		
+		int i;
         for ( i = 0; i < numJobs; i++) {
             if (remainingTime[i] > 0) {
-                done = 0;  
+                done = 0; 
 
                 int executeTime = (remainingTime[i] > timeQuantum) ? timeQuantum : remainingTime[i];
 
@@ -168,7 +161,7 @@ void simulateCPU_RoundRobin(Job *jobs, int numJobs, int timeQuantum, FILE *outpu
                 
                 int tempOrder = arrivalOrder[i];
                 int j;
-                for (j = i; j < numJobs - 1; j++) {
+                for ( j = i; j < numJobs - 1; j++) {
                     arrivalOrder[j] = arrivalOrder[j + 1];
                 }
                 arrivalOrder[numJobs - 1] = tempOrder;
@@ -186,15 +179,6 @@ void simulateCPU_RoundRobin(Job *jobs, int numJobs, int timeQuantum, FILE *outpu
     free(arrivalOrder);
 }
 
-
-
-
-
-
-
-
-
-// Function to calculate and display waiting times
 void calculateWaitingTimes(Job *jobs, int numJobs, FILE *outputFile) {
     int totalWaitingTime = 0;
 
@@ -296,7 +280,7 @@ int main(int argc, char *argv[]) {
                         break;
                     case 3:
                         fprintf(outputFile, "Scheduling Method: Shortest Job First – Non-Preemptive\n");
-                        simulateCPU_SJF(jobs, numJobs, 0, outputFile); // Non-preemptive
+                        simulateCPU_SJF(jobs, numJobs, outputFile);
                         break;
                     case 4:
                         fprintf(outputFile, "Scheduling Method: Priority Scheduling – ");
@@ -326,6 +310,7 @@ int main(int argc, char *argv[]) {
 
     } while (opt != 4);
 
+    
     fclose(outputFile);
 
     free(jobs);
